@@ -1,5 +1,5 @@
 var S = {
-    tab: 'cal',
+    tab: 'home',
     cal: null,
     mode: 'school',
     cw: '',
@@ -196,6 +196,10 @@ function customHols(y) {
 ========================= */
 
 function todayBar() {
+    var k = dateKey(new Date());
+
+    if (holName(k)) return '';
+
     var dw = (N.getDay() + 6) % 7;
 
     var L = S.lessons
@@ -212,16 +216,7 @@ function todayBar() {
         '<div class="box" style="display:block">' +
         '<b>Dziś:</b> ' +
         L.map(function(l) {
-            return (
-                esc(l.time) +
-                ' ' +
-                esc(l.subj) +
-                (
-                    l.room ?
-                    ' (' + esc(l.room) + ')' :
-                    ''
-                )
-            );
+            return esc(l.time) + ' ' + esc(l.subj) + (l.room ? ' (' + esc(l.room) + ')' : '');
         }).join(' · ') +
         '</div>'
     );
@@ -283,13 +278,16 @@ function id() {
 ========================= */
 
 var TABS = {
+    home: 'Pulpit',
     cal: 'Kalendarz',
     week: 'Tydzień',
-    tests: 'Sprawdziany',
     plan: 'Plan lekcji',
+    tests: 'Sprawdziany',
+    tasks: 'Zadania',
     goals: 'Cele',
     grades: 'Oceny',
-    notes: 'Notatki'
+    notes: 'Notatki',
+    pomo: 'Nauka'
 };
 
 
@@ -324,22 +322,6 @@ function f(n) {
 }
 
 
-function days(d) {
-    var n = Math.ceil(
-        (
-            new Date(d) -
-            new Date().setHours(0, 0, 0, 0)
-        ) / 864e5
-    );
-
-    return n < 0 ?
-        'minął' :
-        n == 0 ?
-        'dziś' :
-        n == 1 ?
-        'jutro' :
-        'za ' + n + ' dni';
-}
 
 
 function val(g) {
@@ -476,47 +458,37 @@ function renderWeek() {
         weekStart(N);
 
     var names = [
-        'Pon',
-        'Wt',
-        'Śr',
-        'Czw',
-        'Pt',
-        'Sob',
-        'Nd'
+        'Poniedziałek',
+        'Wtorek',
+        'Środa',
+        'Czwartek',
+        'Piątek',
+        'Sobota',
+        'Niedziela'
     ];
-
-    var out =
-        '<div class="week-head">' +
-
-        '<button data-week="-1">‹</button>' +
-
-        '<b>' +
-        formatShortDate(start) +
-        ' – ';
 
     var end = new Date(start);
     end.setDate(end.getDate() + 6);
 
-    out +=
-        formatShortDate(end) +
-        '</b>' +
+    var tk = dateKey(new Date());
 
-        '<button data-week="1">›</button>' +
-
-        '</div>';
-
-    out += '<div class="week-grid">';
+    var out =
+        '<div class="week-head">' +
+        '<button data-week="-1" aria-label="Poprzedni tydzień">‹</button>' +
+        '<b>' + formatShortDate(start) + ' – ' + formatShortDate(end) + '</b>' +
+        '<button data-week="1" aria-label="Następny tydzień">›</button>' +
+        '<button data-weektoday="1">Dziś</button>' +
+        '</div>' +
+        '<div class="week-grid">';
 
     for (var i = 0; i < 7; i++) {
         var d = new Date(start);
-
-        d.setDate(
-            start.getDate() + i
-        );
+        d.setDate(start.getDate() + i);
 
         var key = dateKey(d);
+        var hn = holName(key);
 
-        var lessons = S.lessons
+        var lessons = hn ? [] : S.lessons
             .filter(function(l) {
                 return Number(l.day) == i;
             })
@@ -532,93 +504,57 @@ function renderWeek() {
             return g.date == key;
         });
 
-        var holiday = customHols(
-            d.getFullYear()
-        )[key];
+        var tasks = S.tasks.filter(function(t) {
+            return t.date == key;
+        });
 
         out +=
-            '<div class="week-day">' +
+            '<div class="week-day' + (key == tk ? ' today' : '') + '">' +
+            '<div class="week-day-head"><b>' + names[i] + '</b>' +
+            '<small>' + formatShortDate(d) + '</small></div>';
 
-            '<div class="week-day-head">' +
-
-            '<b>' +
-            names[i] +
-            '</b>' +
-
-            '<small>' +
-            formatShortDate(d) +
-            '</small>' +
-
-            '</div>';
-
-        if (holiday) {
-            out +=
-                '<div class="week-holiday">' +
-                esc(holiday) +
-                '</div>';
+        if (hn) {
+            out += '<div class="week-holiday">' + esc(hn) + '</div>';
         }
 
         lessons.forEach(function(l) {
             out +=
-                '<div class="week-item lesson">' +
-
-                '<b>' +
-                esc(l.time || '') +
-                '</b> ' +
-
+                '<div class="week-item lesson"><b>' + esc(l.time || '') + '</b> ' +
                 esc(l.subj) +
-
-                (
-                    l.room ?
-                    '<small> · ' +
-                    esc(l.room) +
-                    '</small>' :
-                    ''
-                ) +
-
+                (l.room ? '<small> · ' + esc(l.room) + '</small>' : '') +
                 '</div>';
         });
 
         tests.forEach(function(t) {
             out +=
-                '<div class="week-item test">' +
-                '📚 ' +
+                '<div class="week-item test' + (t.done ? ' done' : '') + '">📚 ' +
                 esc(t.subj) +
-                (
-                    t.topic ?
-                    '<small> · ' +
-                    esc(t.topic) +
-                    '</small>' :
-                    ''
-                ) +
+                (t.topic ? '<small> · ' + esc(t.topic) + '</small>' : '') +
+                '</div>';
+        });
+
+        tasks.forEach(function(t) {
+            out +=
+                '<div class="week-item task' + (t.done ? ' done' : '') + '">📝 ' +
+                esc(t.subj) +
+                (t.topic ? '<small> · ' + esc(t.topic) + '</small>' : '') +
                 '</div>';
         });
 
         goals.forEach(function(g) {
             out +=
-                '<div class="week-item goal">' +
-                '🎯 ' +
-                esc(g.subj) +
-                '</div>';
+                '<div class="week-item goal' + (g.done ? ' done' : '') + '">🎯 ' +
+                esc(g.subj) + '</div>';
         });
 
-        if (!lessons.length &&
-            !tests.length &&
-            !goals.length &&
-            !holiday
-        ) {
-            out +=
-                '<div class="mut">' +
-                'Brak wpisów' +
-                '</div>';
+        if (!lessons.length && !tests.length && !goals.length && !tasks.length && !hn) {
+            out += '<div class="mut">Brak wpisów</div>';
         }
 
         out += '</div>';
     }
 
-    out += '</div>';
-
-    return out;
+    return out + '</div>';
 }
 
 
@@ -627,6 +563,9 @@ function renderWeek() {
 ========================= */
 
 function render() {
+
+    ensure();
+
 
     $('nav').innerHTML =
         Object.keys(TABS)
@@ -706,6 +645,12 @@ function render() {
             }
         });
 
+
+        S.tasks.forEach(function(t) {
+            if (t.date && !t.done) {
+                (ev[t.date] = ev[t.date] || []).push('<em>' + esc(t.subj) + '</em>');
+            }
+        });
 
         h =
             todayBar() +
@@ -838,6 +783,7 @@ function render() {
             '<p class="mut">' +
             '■ sprawdzian &nbsp; ' +
             '□ cel &nbsp; ' +
+            '┄ zadanie &nbsp; ' +
             '▨ dzień wolny &nbsp; ' +
             '— kliknij dzień, aby dodać wpis' +
             '</p>';
@@ -878,6 +824,16 @@ function render() {
                     })
                 );
 
+
+            S.tasks.filter(function(x) {
+                return x.date == S.sel;
+            }).forEach(function(x) {
+                it.push({
+                    k: 'tasks',
+                    x: x,
+                    l: 'Zadanie'
+                });
+            });
 
             h +=
                 '<div id="dayform" class="box" style="display:block">' +
@@ -1029,6 +985,7 @@ function render() {
                 'Sprawdzian' +
                 '</option>' +
 
+                '<option value="tasks">Zadanie</option>' +
                 '<option value="goals">' +
                 'Cel' +
                 '</option>' +
@@ -1942,9 +1899,11 @@ function render() {
     if (S.tab == 'notes') {
 
         h =
+            '<input id="nq" placeholder="🔍 Szukaj w notatkach (Enter)" value="' + esc(S.nq || '') + '" style="width:100%;margin-bottom:10px">' +
             '<div class="nl">' +
 
             S.notes
+            .filter(noteMatch)
             .map(function(n) {
 
                 return (
@@ -2043,7 +2002,282 @@ function render() {
        NAGŁÓWEK
     ========================= */
 
+    /* =========================
+       DODANE: PULPIT
+    ========================= */
+
+    if (S.tab == 'home') {
+
+        var hNow = new Date();
+        var hKey = dateKey(hNow);
+        var hDow = (hNow.getDay() + 6) % 7;
+        var hHol = holName(hKey);
+
+        var MN = ['stycznia', 'lutego', 'marca', 'kwietnia', 'maja', 'czerwca', 'lipca', 'sierpnia', 'września', 'października', 'listopada', 'grudnia'];
+        var WD = ['niedziela', 'poniedziałek', 'wtorek', 'środa', 'czwartek', 'piątek', 'sobota'];
+
+        var hr = hNow.getHours();
+        var gr = hr < 5 ? 'Dobrej nocy' : hr < 12 ? 'Dzień dobry' : hr < 18 ? 'Cześć' : 'Dobry wieczór';
+
+        var byDate = function(a, b) {
+            var x = a.date || '9999';
+            var y2 = b.date || '9999';
+
+            return x > y2 ? 1 : x < y2 ? -1 : 0;
+        };
+
+        h =
+            '<div class="hello"><b>' + gr + '!</b><span>' +
+            WD[hNow.getDay()] + ', ' + hNow.getDate() + ' ' +
+            MN[hNow.getMonth()] + ' ' + hNow.getFullYear() +
+            '</span></div>';
+
+        if (hHol) {
+            h +=
+                '<div class="box" style="display:block">🎉 Dziś dzień wolny: <b>' +
+                esc(hHol) + '</b></div>';
+        }
+
+
+        /* DZIŚ */
+
+        var hLess = hHol ? [] : S.lessons
+            .filter(function(l) {
+                return Number(l.day) == hDow;
+            })
+            .sort(function(a, b) {
+                return a.time > b.time ? 1 : -1;
+            });
+
+        h += '<h2>Dziś w szkole</h2>';
+
+        h += hLess.map(function(l) {
+            return (
+                '<div class="item"><span class="bd">' + esc(l.time || '–') + '</span>' +
+                '<div class="t"><b>' + esc(l.subj) + '</b> <small>' + esc(l.room) + '</small></div></div>'
+            );
+        }).join('') || (
+            '<p class="mut">' +
+            (S.lessons.length || hHol ? 'Brak lekcji na dziś.' : 'Nie masz jeszcze planu lekcji.') +
+            (S.lessons.length ? '' : ' <button data-goto="plan">Dodaj plan lekcji</button>') +
+            '</p>'
+        );
+
+
+        /* SPRAWDZIANY */
+
+        var hTests = S.tests
+            .filter(function(t) {
+                return !t.done && t.date && dleft(t.date) >= 0;
+            })
+            .sort(byDate)
+            .slice(0, 4);
+
+        h += '<h2>Najbliższe sprawdziany</h2>';
+
+        h += hTests.map(function(t) {
+            var ck = t.checklist || [];
+            var dn = ck.filter(function(c) {
+                return c.done;
+            }).length;
+
+            return (
+                '<div class="item' + priorityClass(t.priority) + '">' +
+                '<div class="t"><b>' + esc(t.subj) + '</b> <small>' + esc(t.topic) + '</small>' +
+                (ck.length ? '<br><small>Zakres: ' + dn + '/' + ck.length + '</small>' : '') +
+                '</div><span class="bd">' + days(t.date) + '</span></div>'
+            );
+        }).join('') || (
+            '<p class="mut">Brak zaplanowanych sprawdzianów. <button data-goto="tests">Dodaj</button></p>'
+        );
+
+
+        /* ZADANIA */
+
+        var hTasks = S.tasks
+            .filter(function(t) {
+                return !t.done;
+            })
+            .sort(byDate)
+            .slice(0, 6);
+
+        h += '<h2>Do zrobienia</h2>';
+
+        h += hTasks.map(function(t) {
+            return (
+                '<div class="item' + priorityClass(t.priority) + '">' +
+                '<input type="checkbox" data-done="tasks" data-id="' + t.id + '">' +
+                '<div class="t"><b>' + esc(t.subj) + '</b> <small>' + esc(t.topic) + '</small></div>' +
+                taskBadge(t) + '</div>'
+            );
+        }).join('') || (
+            '<p class="mut">Nic na liście. <button data-goto="tasks">Dodaj zadanie</button></p>'
+        );
+
+
+        /* ŚREDNIA */
+
+        var hAvg = avg(
+            S.grades
+            .filter(function(g) {
+                return g.real !== '' && g.real != null;
+            })
+            .map(function(g) {
+                return {
+                    v: g.real,
+                    w: g.w
+                };
+            })
+        );
+
+        if (hAvg != null) {
+            h +=
+                '<h2>Średnia</h2><div class="box"><div><span class="mut">Aktualna</span>' +
+                '<div class="big">' + f(hAvg) + '</div></div>' +
+                (S.target ? '<div><span class="mut">Cel</span><div class="big">' + esc(S.target) + '</div></div>' : '') +
+                '<div><button data-goto="grades">Oceny →</button></div></div>';
+        }
+
+
+        /* ODLICZANIE */
+
+        h += '<h2>Odliczanie</h2>';
+
+        h += S.countdowns
+            .slice()
+            .sort(byDate)
+            .map(function(c) {
+                var n = dleft(c.date);
+
+                return (
+                    '<div class="item"><div class="t"><b>' + esc(c.name) + '</b><br><small>' +
+                    esc(c.date.split('-').reverse().join('.')) + '</small></div>' +
+                    '<span class="cdn">' + cdText(n) + '</span>' +
+                    '<button class="x" aria-label="Usuń odliczanie" data-del="countdowns" data-id="' + c.id + '">✕</button></div>'
+                );
+            })
+            .join('');
+
+        h +=
+            '<div class="row"><input id="cdn" placeholder="Np. matura, sesja, wakacje">' +
+            '<input id="cdd" type="date"><button class="btn" data-addcd="1">Dodaj odliczanie</button></div>';
+    }
+
+
+    /* =========================
+       DODANE: ZADANIA DOMOWE
+    ========================= */
+
+    if (S.tab == 'tasks') {
+
+        h =
+            '<div class="row">' +
+            '<input id="a1" placeholder="Zadanie (np. zad. 5 str. 120)">' +
+            '<input id="a2" placeholder="Przedmiot">' +
+            '<input id="a3" type="date">' +
+            '<select id="a8">' +
+            '<option value="normal">⚪ Normalne</option>' +
+            '<option value="medium">🟡 Ważne</option>' +
+            '<option value="high">🔴 Pilne</option>' +
+            '</select>' +
+            '<button class="btn" data-add="tasks">Dodaj</button>' +
+            '</div>';
+
+        h += S.tasks
+            .slice()
+            .sort(function(a, b) {
+                if (!!a.done != !!b.done) return a.done ? 1 : -1;
+
+                var x = a.date || '9999';
+                var y3 = b.date || '9999';
+
+                return x > y3 ? 1 : x < y3 ? -1 : 0;
+            })
+            .map(function(t) {
+                return (
+                    '<div class="item' + (t.done ? ' done' : '') + priorityClass(t.priority) + '">' +
+                    '<input type="checkbox" data-done="tasks" data-id="' + t.id + '"' + (t.done ? ' checked' : '') + '>' +
+                    '<div class="t"><b>' + esc(t.subj) + '</b> <small>' + esc(t.topic) + '</small>' +
+                    '<br><small>' + priorityName(t.priority) + '</small></div>' +
+                    taskBadge(t) +
+                    '<button class="x" aria-label="Usuń zadanie" data-del="tasks" data-id="' + t.id + '">✕</button></div>'
+                );
+            })
+            .join('') || '<p class="mut">Brak zadań. Odpoczywaj! 🙌</p>';
+
+        if (S.tasks.some(function(t) {
+                return t.done;
+            })) {
+            h += '<button data-clear="tasks">Usuń wykonane</button>';
+        }
+    }
+
+
+    /* =========================
+       DODANE: NAUKA (POMODORO)
+    ========================= */
+
+    if (S.tab == 'pomo') {
+
+        var pTk = dateKey(new Date());
+        var pCnt = S.pomo.done[pTk] || 0;
+        var pMin = S.pomo.mins[pTk] || 0;
+        var pWeek = 0;
+
+        for (var q = 0; q < 7; q++) {
+            var dq = new Date();
+            dq.setDate(dq.getDate() - q);
+            pWeek += S.pomo.done[dateKey(dq)] || 0;
+        }
+
+        h =
+            '<div class="pomo">' +
+            '<div class="pm">' + (PT.mode == 'work' ? '📖 Nauka' : '☕ Przerwa') + '</div>' +
+            '<div class="big pt" id="pt">' + ptFmt(ptLeft()) + '</div>' +
+
+            '<div class="row">' +
+            '<button class="btn" data-pt="' + (PT.run ? 'pause' : 'start') + '">' + (PT.run ? 'Pauza' : 'Start') + '</button>' +
+            '<button data-pt="reset">Reset</button>' +
+            '</div>' +
+
+            '<div class="row">' +
+            '<button data-pt="work" class="' + (PT.mode == 'work' ? 'on' : '') + '">Nauka</button>' +
+            '<button data-pt="brk" class="' + (PT.mode == 'brk' ? 'on' : '') + '">Przerwa</button>' +
+            '</div>' +
+            '</div>' +
+
+            '<div class="box">' +
+            '<div><span class="mut">Dziś</span><div class="big">' + pCnt + '</div><span class="mut">sesji · ' + pMin + ' min</span></div>' +
+            '<div><span class="mut">Ostatnie 7 dni</span><div class="big">' + pWeek + '</div><span class="mut">sesji</span></div>' +
+            '</div>' +
+
+            '<div class="row">' +
+            '<label>Nauka (min) <input id="pw" type="number" min="1" max="180" class="g" value="' + S.pomo.work + '"></label>' +
+            '<label>Przerwa (min) <input id="pb" type="number" min="1" max="180" class="g" value="' + S.pomo.brk + '"></label>' +
+            '</div>' +
+
+            '<p class="mut">Pomodoro: ucz się skupiony przez jedną sesję, potem zrób krótką przerwę. ' +
+            'Po sygnale timer przełączy się sam, a Ty kliknij Start.</p>';
+    }
+
+
     var HD = {
+
+        home: [
+            'Pulpit',
+            'Wszystko, co ważne na dziś'
+        ],
+
+        tasks: [
+            'Zadania domowe',
+            'Odhaczaj, co masz do zrobienia'
+        ],
+
+        pomo: [
+            'Nauka',
+            'Timer Pomodoro: skupienie i przerwy'
+        ],
+
 
         cal: [
             'Kalendarz',
@@ -2122,7 +2356,132 @@ document.addEventListener('click', function(e) {
         t.closest('[data-day]');
 
 
-    /* QUICK ADD */
+    /* DODANE: ZAMKNIJ MENU SZYBKIEGO DODAWANIA */
+
+    var qm0 = $('quickMenu');
+
+    if (qm0 && !(t.closest && t.closest('.quick-add'))) {
+        qm0.classList.remove('show');
+    }
+
+
+    /* DODANE: MOTYW */
+
+    if (t.dataset.themetoggle) {
+
+        var cur0 = S.theme || (
+            window.matchMedia &&
+            window.matchMedia('(prefers-color-scheme: dark)').matches ?
+            'dark' : 'light'
+        );
+
+        S.theme = cur0 == 'dark' ? 'light' : 'dark';
+
+        applyTheme();
+        save();
+
+        return;
+    }
+
+
+    /* DODANE: SKOK DO ZAKŁADKI */
+
+    if (t.dataset.goto) {
+
+        S.tab = t.dataset.goto;
+
+        save();
+        render();
+
+        return;
+    }
+
+
+    /* DODANE: POMODORO */
+
+    if (t.dataset.pt) {
+
+        ptAct(t.dataset.pt);
+
+        return;
+    }
+
+
+    /* DODANE: TYDZIEŃ - DZIŚ */
+
+    if (t.dataset.weektoday) {
+
+        S.week = null;
+
+        save();
+        render();
+
+        return;
+    }
+
+
+    /* DODANE: ODLICZANIE */
+
+    if (t.dataset.addcd) {
+
+        var cdName = $('cdn').value.trim();
+        var cdDate = $('cdd').value;
+
+        if (!cdName || !cdDate) return;
+
+        S.countdowns.push({
+            id: id(),
+            name: cdName,
+            date: cdDate
+        });
+
+        save();
+        render();
+
+        return;
+    }
+
+
+    /* DODANE: USUŃ WYKONANE */
+
+    if (t.dataset.clear) {
+
+        S[t.dataset.clear] = S[t.dataset.clear].filter(function(x) {
+            return !x.done;
+        });
+
+        save();
+        render();
+
+        return;
+    }
+
+
+    /* DODANE: POBIERZ KOPIĘ */
+
+    if (t.dataset.dl) {
+
+        var blob = new Blob(
+            [JSON.stringify(S, null, 1)], {
+                type: 'application/json'
+            }
+        );
+
+        var link = document.createElement('a');
+
+        link.href = URL.createObjectURL(blob);
+        link.download = 'planner-kopia-' + dateKey(new Date()) + '.json';
+
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+
+        return;
+    }
+
+
+    
+/* QUICK ADD */
 
     if (t.dataset.quick) {
 
@@ -2138,42 +2497,49 @@ document.addEventListener('click', function(e) {
 
     if (t.dataset.quicktype) {
 
-        var type =
-            t.dataset.quicktype;
+        var type = t.dataset.quicktype;
 
+        S.tab = {
+            task: 'tasks',
+            test: 'tests',
+            goal: 'goals',
+            grade: 'grades',
+            holiday: 'cal',
+            note: 'notes'
+        }[type] || S.tab;
 
-        if (type == 'task') {
-            S.tab = 'goals';
-        }
-
-        if (type == 'test') {
-            S.tab = 'tests';
-        }
-
-        if (type == 'goal') {
-            S.tab = 'goals';
-        }
-
-        if (type == 'grade') {
-            S.tab = 'grades';
-        }
-
-        if (type == 'holiday') {
-            S.tab = 'cal';
+        if (type == 'holiday' && !S.sel) {
+            S.sel = dateKey(N);
         }
 
         if (type == 'note') {
-            S.tab = 'notes';
+            var nn = {
+                id: id(),
+                title: '',
+                body: ''
+            };
+
+            S.notes.push(nn);
+            S.note = nn.id;
         }
 
         save();
         render();
 
+        var fi1 = $(
+            type == 'holiday' ? 'holidayName' :
+            type == 'note' ? 'nt' :
+            'a1'
+        );
+
+        if (fi1) fi1.focus();
+
         return;
     }
 
 
-    /* ZMIANA TYGODNIA */
+    
+/* ZMIANA TYGODNIA */
 
     if (t.dataset.week) {
 
@@ -2571,7 +2937,7 @@ document.addEventListener('click', function(e) {
 
         } else {
 
-            S.goals.push({
+            S[typ == 'tasks' ? 'tasks' : 'goals'].push({
 
                 id: id(),
 
@@ -2781,7 +3147,62 @@ document.addEventListener('change', function(e) {
     var a;
 
 
-    /* CHECKLISTA */
+    /* DODANE: SZUKAJ W NOTATKACH */
+
+    if (t.id == 'nq') {
+
+        S.nq = t.value;
+
+        render();
+
+        return;
+    }
+
+
+    /* DODANE: CZAS POMODORO */
+
+    if (t.id == 'pw' || t.id == 'pb') {
+
+        var vv = Math.max(1, Math.min(180, parseInt(t.value, 10) || 25));
+
+        if (t.id == 'pw') S.pomo.work = vv;
+        else S.pomo.brk = vv;
+
+        PT.left = null;
+
+        save();
+        render();
+
+        return;
+    }
+
+
+    /* DODANE: WCZYTAJ KOPIĘ Z PLIKU */
+
+    if (t.id == 'bkf') {
+
+        var file = t.files && t.files[0];
+
+        if (!file) return;
+
+        var fr = new FileReader();
+
+        fr.onload = function() {
+            $('bk').value = fr.result;
+
+            var ib = document.querySelector('[data-imp]');
+
+            if (ib) ib.click();
+        };
+
+        fr.readAsText(file);
+
+        return;
+    }
+
+
+    
+/* CHECKLISTA */
 
     if (t.dataset.check) {
 
@@ -2954,6 +3375,240 @@ document.addEventListener('input', function(e) {
         save();
     }
 });
+
+
+/* =========================
+   DODANE: POMOCNICZE
+========================= */
+
+function ensure() {
+    ['tests', 'goals', 'tasks', 'lessons', 'grades', 'notes', 'holidays', 'countdowns'].forEach(function(k) {
+        if (!Array.isArray(S[k])) S[k] = [];
+    });
+
+    if (!S.pomo || typeof S.pomo != 'object') S.pomo = {};
+
+    S.pomo.done = S.pomo.done || {};
+    S.pomo.mins = S.pomo.mins || {};
+    S.pomo.work = S.pomo.work || 25;
+    S.pomo.brk = S.pomo.brk || 5;
+
+    if (!S.cal) {
+        S.cal = {
+            y: N.getFullYear(),
+            m: N.getMonth()
+        };
+    }
+}
+
+
+function applyTheme() {
+    try {
+        if (S.theme) {
+            document.documentElement.setAttribute('data-theme', S.theme);
+        }
+    } catch (e) {}
+}
+
+
+/* liczba dni od dziś (lokalnie, bez błędów stref czasowych) */
+
+function dleft(d) {
+    var a = parseDateKey(d);
+    var t = new Date();
+
+    t = new Date(t.getFullYear(), t.getMonth(), t.getDate());
+
+    return Math.round((a - t) / 864e5);
+}
+
+
+function days(d) {
+    var n = dleft(d);
+
+    return n < 0 ? 'minął' :
+        n == 0 ? 'dziś' :
+        n == 1 ? 'jutro' :
+        'za ' + n + ' dni';
+}
+
+
+function cdText(n) {
+    return n < 0 ? 'minęło' :
+        n == 0 ? 'dziś!' :
+        n == 1 ? '1 dzień' :
+        n + ' dni';
+}
+
+
+function taskBadge(t) {
+    if (!t.date) return '';
+
+    var n = dleft(t.date);
+
+    return (
+        '<span class="bd' +
+        (n < 0 && !t.done ? ' late' : '') +
+        '">' +
+        (n < 0 ? 'po terminie' : days(t.date)) +
+        '</span>'
+    );
+}
+
+
+/* nazwa dnia wolnego: własny albo ustawowy */
+
+function holName(k) {
+    var y = Number(String(k).slice(0, 4));
+
+    return customHols(y)[k] || hols(y)[k] || '';
+}
+
+
+function noteMatch(n) {
+    var q = String(S.nq || '').trim().toLowerCase();
+
+    if (!q) return true;
+
+    return (
+        String(n.title || '').toLowerCase().indexOf(q) > -1 ||
+        String(n.body || '').toLowerCase().indexOf(q) > -1 ||
+        n.id == S.note
+    );
+}
+
+
+/* =========================
+   DODANE: POMODORO
+========================= */
+
+var PT = {
+    run: false,
+    end: 0,
+    left: null,
+    mode: 'work',
+    iv: null
+};
+
+
+function ptMin() {
+    return PT.mode == 'work' ? S.pomo.work : S.pomo.brk;
+}
+
+
+function ptFmt(s) {
+    s = Math.max(0, Math.round(s));
+
+    return (
+        ('0' + Math.floor(s / 60)).slice(-2) +
+        ':' +
+        ('0' + (s % 60)).slice(-2)
+    );
+}
+
+
+function ptLeft() {
+    if (PT.run) return (PT.end - Date.now()) / 1000;
+
+    return PT.left == null ? ptMin() * 60 : PT.left;
+}
+
+
+function beep() {
+    try {
+        var AC = window.AudioContext || window.webkitAudioContext;
+        var c = new AC();
+        var o = c.createOscillator();
+        var g = c.createGain();
+
+        o.connect(g);
+        g.connect(c.destination);
+        o.frequency.value = 880;
+        g.gain.value = 0.15;
+        o.start();
+
+        setTimeout(function() {
+            o.stop();
+            c.close();
+        }, 700);
+    } catch (e) {}
+}
+
+
+function ptDone() {
+    clearInterval(PT.iv);
+
+    PT.run = false;
+    PT.left = null;
+
+    if (PT.mode == 'work') {
+        var k = dateKey(new Date());
+
+        S.pomo.done[k] = (S.pomo.done[k] || 0) + 1;
+        S.pomo.mins[k] = (S.pomo.mins[k] || 0) + S.pomo.work;
+
+        PT.mode = 'brk';
+    } else {
+        PT.mode = 'work';
+    }
+
+    save();
+    beep();
+
+    document.title = '✅ Koniec! · Planner';
+
+    if (S.tab == 'pomo') render();
+}
+
+
+function ptTick() {
+    var l = ptLeft();
+    var el = $('pt');
+
+    if (el) el.textContent = ptFmt(l);
+
+    if (PT.run && l <= 0) {
+        ptDone();
+        return;
+    }
+
+    if (PT.run) document.title = ptFmt(l) + ' · Planner';
+}
+
+
+function ptAct(a) {
+    if (a == 'start') {
+        if (PT.run) return;
+
+        var l = ptLeft();
+
+        PT.run = true;
+        PT.end = Date.now() + l * 1000;
+
+        clearInterval(PT.iv);
+        PT.iv = setInterval(ptTick, 500);
+
+    } else {
+        if (PT.run) PT.left = ptLeft();
+
+        PT.run = false;
+        clearInterval(PT.iv);
+        document.title = 'Planner';
+
+        if (a == 'reset') PT.left = null;
+
+        if (a == 'work' || a == 'brk') {
+            PT.mode = a;
+            PT.left = null;
+        }
+    }
+
+    render();
+}
+
+
+ensure();
+applyTheme();
 
 
 /* =========================

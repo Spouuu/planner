@@ -1,32 +1,15 @@
 <!doctype html>
-<html lang="pl">
-
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-    <title>Planner</title>
-    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Patrick+Hand&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css">
-</head>
-
-<body>
-    <main>
-        <h1>✦ Planner ✦</h1>
-        <p class="sub">szkoła · studia · oceny · plan</p>
-        <nav id="nav"></nav>
-        <p id="saveStatus" role="status" aria-live="polite"></p>
-        <div id="v"></div>
-        <details class="card backup">
-            <summary>Kopia zapasowa danych</summary>
-            <p class="mut">Planner zapisuje zmiany w tej przeglądarce. Pobierz kopię, aby zachować dane również poza nią.</p>
-            <div class="row">
-                <button type="button" data-exp="1">Pobierz kopię danych</button>
-                <button type="button" data-imp="1">Wczytaj kopię danych</button>
-                <input id="backupFile" type="file" accept="application/json,.json" hidden>
-            </div>
-        </details>
-    </main>
-    <script src="script.js"></script>
-</body>
-
-</html>
+<html lang="pl"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Planner</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Patrick+Hand&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css"></head><body><main>
+<button class="theme" data-themetoggle="1" aria-label="Zmień motyw: jasny lub ciemny" title="Jasny / ciemny">◐</button>
+<h1>✦ Planner ✦</h1><p class="sub">szkoła · studia · oceny · plan</p>
+<nav id="nav"></nav><div id="v"></div>
+<details class="card"><summary>Kopia zapasowa (przenoszenie na inne urządzenie)</summary>
+<p class="mut">Pobierz plik z kopią i wczytaj go na innym urządzeniu. Możesz też skopiować tekst ręcznie.</p>
+<div class="row" style="border:0;padding:0"><button class="btn" data-dl="1">⬇ Pobierz plik</button><label class="filebtn">⬆ Wczytaj z pliku<input type="file" id="bkf" accept=".json,application/json" hidden></label></div>
+<textarea id="bk"></textarea><button data-exp="1">Pokaż kopię</button> <button data-imp="1">Wczytaj tekst</button></details>
+</main>
+<script src="script.js"></script></body></html>
