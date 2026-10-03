@@ -1,10 +1,32 @@
 <!doctype html>
-<html lang="pl"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Planner</title>
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Patrick+Hand&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css"></head><body><main>
-<h1>✦ Planner ✦</h1><p class="sub">szkoła · studia · oceny · plan</p>
-<nav id="nav"></nav><div id="v"></div>
-</main>
-<script src="script.js"></script></body></html>
+<html lang="pl">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <title>Planner</title>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Patrick+Hand&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <main>
+        <h1>✦ Planner ✦</h1>
+        <p class="sub">szkoła · studia · oceny · plan</p>
+        <nav id="nav"></nav>
+        <p id="saveStatus" role="status" aria-live="polite"></p>
+        <div id="v"></div>
+        <details class="card backup">
+            <summary>Kopia zapasowa danych</summary>
+            <p class="mut">Planner zapisuje zmiany w tej przeglądarce. Pobierz kopię, aby zachować dane również poza nią.</p>
+            <div class="row">
+                <button type="button" data-exp="1">Pobierz kopię danych</button>
+                <button type="button" data-imp="1">Wczytaj kopię danych</button>
+                <input id="backupFile" type="file" accept="application/json,.json" hidden>
+            </div>
+        </details>
+    </main>
+    <script src="script.js"></script>
+</body>
+
+</html>
